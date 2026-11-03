@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Waste Management</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f0f5f1;color:#183326}
+header{background:#087b45;color:white;padding:25px 15px;text-align:center}
+header h1{margin:0 0 8px;font-size:26px}
+header p{margin:5px}
+.container{max-width:650px;margin:18px auto;padding:18px;background:white;border-radius:14px;box-shadow:0 3px 12px #0001}
+h2{color:#087b45}
+input,textarea,button,select{width:100%;padding:13px;margin:7px 0;border:1px solid #ccc;border-radius:8px;font-size:15px}
+button{background:#087b45;color:white;border:0;font-weight:bold;cursor:pointer}
+button:hover{background:#055b34}
+.secondary{background:#285b92}
+.danger{background:#b52b2b}
+.card{padding:14px;margin:12px 0;background:#eff7f1;border-radius:9px;border-left:4px solid #087b45}
+.status{font-weight:bold;color:#a66b00}
+small{color:#666}
+#photoPreview{max-width:100%;max-height:180px;display:none;margin:10px auto}
+.stats{display:flex;gap:10px;text-align:center}
+.stat{flex:1;background:#e4f3e8;padding:12px;border-radius:9px}
+.stat b{display:block;font-size:25px;color:#087b45}
+footer{text-align:center;padding:20px;color:#555}
+</style>
+</head>
+<body>
+
+<header>
+<h1>♻️ Smart Waste Management</h1>
+<p>Clean Village, Green Village</p>
+<p>स्वच्छ गाँव, स्वस्थ जीवन</p>
+</header>
+
+<div class="container">
+<h2>📊 Dashboard</h2>
+<div class="stats">
+<div class="stat"><b id="total">0</b><small>Total</small></div>
+<div class="stat"><b id="pending">0</b><small>Pending</small></div>
+<div class="stat"><b id="done">0</b><small>Completed</small></div>
+</div>
+</div>
+
+<div class="container">
+<h2>📝 Report Waste</h2>
+
+<input id="name" placeholder="Enter your name">
+<input id="phone" type="tel" placeholder="Mobile number">
+
+<select id="type">
+<option value="">Select Waste Type</option>
+<option>Plastic Waste</option>
+<option>Household Garbage</option>
+<option>Roadside Garbage</option>
+<option>Drainage Waste</option>
+<option>Other</option>
+</select>
+
+<textarea id="description" rows="3" placeholder="Describe the waste problem"></textarea>
+
+<input id="address" placeholder="Village / Area / Location">
+
+<button type="button" onclick="getLocation()">📍 Get Current GPS Location</button>
+<p id="gps">Location not selected</p>
+
+<label>Upload Waste Photo</label>
+<input id="photo" type="file" accept="image/*">
+<img id="photoPreview" alt="Waste photo preview">
+
+<button type="button" onclick="submitReport()">Submit Complaint</button>
+<p id="message"></p>
+</div>
+
+<div class="container">
+<h2>📋 All Complaints</h2>
+<div id="reports">No complaints submitted yet.</div>
+</div>
+
+<footer>
+<p>♻️ Smart Waste Management System</p>
+<p>Let's Make Our Village Clean & Green!</p>
+</footer>
+
+<script>
+let latitude = "";
+let longitude = "";
+let photoData = "";
+
+function getLocation(){
+if(!navigator.geolocation){
+alert("Location is not supported");
+return;
+}
+document.getElementById("gps").innerText="Getting location...";
+navigator.geolocation.getCurrentPosition(
+function(pos){
+latitude=pos.coords.latitude;
+longitude=pos.coords.longitude;
+document.getElementById("gps").innerText=
+"Location captured: "+latitude.toFixed(5)+", "+longitude.toFixed(5);
+},
+function(){
+document.getElementById("gps").innerText="Location permission denied";
+alert("Please allow location permission or enter address manually.");
+},
+{enableHighAccuracy:true,timeout:15000}
+);
+}
+
+document.getElementById("photo").addEventListener("change",function(e){
+let file=e.target.files[0];
+if(!file)return;
+if(!file.type.startsWith("image/")){
+alert("Please select an image");
+return;
+}
+let reader=new FileReader();
+reader.onload=function(event){
+let img=new Image();
+img.onload=function(){
+let canvas=document.createElement("canvas");
+let scale=Math.min(1,640/Math.max(img.width,img.height));
+canvas.width=Math.round(img.width*scale);
+canvas.height=Math.round(img.height*scale);
+canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+photoData=canvas.toDataURL("image/jpeg",0.6);
+document.getElementById("photoPreview").src=photoData;
+document.getElementById("photoPreview").style.display="block";
+};
+img.src=event.target.result;
+};
+reader.readAsDataURL(file);
+});
+
+function submitReport(){
+let name=document.getElementById("name").value.trim();
+let phone=document.getElementById("phone").value.trim();
+let type=document.getElementById("type").value;
+let description=document.getElementById("description").value.trim();
+let address=document.getElementById("address").value.trim();
+
+if(!name||!phone||!type||!description||!address){
+alert("Please fill all required fields");
+return;
+}
+if(!/^[0-9]{10}$/.test(phone)){
+alert("Enter a valid 10 digit mobile number");
+return;
+}
+
+let reports=JSON.parse(localStorage.getItem("wasteReports")||"[]");
+
+reports.unshift({
+id:Date.now(),
+name,phone,type,description,address,
+latitude,longitude,
+photo:photoData,
+status:"Pending",
+date:new Date().toLocaleString()
+});
+
+try{
+localStorage.setItem("wasteReports",JSON.stringify(reports));
+}catch(e){
+alert("Storage full. Please remove some old reports.");
+return;
+}
+
+document.getElementById("message").innerText="✅ Complaint submitted successfully!";
+document.getElementById("name").value="";
+document.getElementById("phone").value="";
+document.getElementById("type").value="";
+document.getElementById("description").value="";
+document.getElementById("address").value="";
+document.getElementById("photo").value="";
+document.getElementById("photoPreview").style.display="none";
+document.getElementById("gps").innerText="Location not selected";
+latitude="";
+longitude="";
+photoData="";
+showReports();
+}
+
+function showReports(){
+let reports=JSON.parse(localStorage.getItem("wasteReports")||"[]");
+let pending=reports.filter(r=>r.status==="Pending").length;
+let done=reports.filter(r=>r.status==="Completed").length;
+
+document.getElementById("total").innerText=reports.length;
+document.getElementById("pending").innerText=pending;
+document.getElementById("done").innerText=done;
+
+let box=document.getElementById("reports");
+if(!reports.length){
+box.innerHTML="No complaints submitted yet.";
+return;
+}
+
+box.innerHTML=reports.map(r=>`
+<div class="card">
+<b>Complaint #${r.id}</b>
+<p><b>Name:</b> ${escapeHTML(r.name)}</p>
+<p><b>Problem:</b> ${escapeHTML(r.type)}</p>
+<p><b>Description:</b> ${escapeHTML(r.description)}</p>
+<p><b>Address:</b> ${escapeHTML(r.address)}</p>
+<p><b>Date:</b> ${escapeHTML(r.date)}</p>
+<p class="status">Status: ${r.status}</p>
+${r.photo?<img src="${r.photo}" style="max-width:100%;max-height:150px">:""}
+${r.latitude?<p><a target="_blank" href="https://www.google.com/maps?q=${r.latitude},${r.longitude}">View GPS Location</a></p>:""}
+<button class="secondary" onclick="completeReport(${r.id})">Mark Completed</button>
+<button class="danger" onclick="deleteReport(${r.id})">De…
